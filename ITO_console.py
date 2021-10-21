@@ -17,9 +17,12 @@ import hyperion
 import logging
 from datetime import datetime
 
-program_version = '20.10.2021'
-extended_commands = {'sync_clock': 'set ITO clock by this PC time',
-                     'sync_clock_utc': 'set ITO clock by this PC UTC-time (no time zone)'
+program_version = '21.10.2021'
+
+# name_of_command: command_description
+extended_commands = {'_sync_clock': 'set ITO clock by this PC time',
+                     '_sync_clock_utc': 'set ITO clock by this PC UTC-time (no time zone)',
+                     '_save_spectrum': 'save full spectrum to file'
                      }
 
 
@@ -124,13 +127,14 @@ if __name__ == "__main__":
             logging.info(msg)
             continue
 
+        pCommand = command.partition(" ")
+
         # встроенные команды ИТО начинаются с решетки
         if command[0] == "#":
             msg = f'>> {command}'
             print(msg)
             logging.info(msg)
 
-            pCommand = command.partition(" ")
             try:
                 response = hyperion.HCommTCPClient.hyperion_command(ipAddress, pCommand[0], pCommand[2])
             except hyperion.HyperionError as e:
@@ -143,17 +147,45 @@ if __name__ == "__main__":
                 logging.info(msg)
 
         # дополнительные команды - от меня
-        elif 'sync_clock' in command.partition(" ")[0]:
-            # установка часов ИТО по часам этого компьютера
-            logging.info(command)
-            msg = extended_commands[command.split()[0]]
-            print(msg)
-            logging.info(msg)
+        elif command[0] == "_":
+            if '_sync_clock' in pCommand[0]:
+                # установка часов ИТО по часам этого компьютера
+                logging.info(command)
+                msg = extended_commands[command.split()[0]]
+                print(msg)
+                logging.info(msg)
 
-            if command.partition(" ")[0] == 'sync_clock':
-                datetime_to_be_set = datetime.now()
-            elif command.partition(" ")[0] == 'sync_clock_utc':
-                datetime_to_be_set = datetime.utcnow()
+                if pCommand[0] == 'sync_clock':
+                    datetime_to_be_set = datetime.now()
+                elif pCommand[0] == 'sync_clock_utc':
+                    datetime_to_be_set = datetime.utcnow()
 
-            commands_list.insert(0, f"#SetInstrumentUtcDateTime {datetime_to_be_set.strftime('%Y %m %d %H %M %S')}".lower())
-            commands_list.insert(1, f"#GetInstrumentUtcDateTime".lower())
+                # добавим команды на установку времени в конвейр команд - исполнятся в следующих циклах
+                commands_list.insert(0, f"#SetInstrumentUtcDateTime {datetime_to_be_set.strftime('%Y %m %d %H %M %S')}".lower())
+                commands_list.insert(1, f"#GetInstrumentUtcDateTime".lower())
+
+            elif pCommand[0] == '_save_spectrum':
+                # save full spectrum to file
+                logging.info(command)
+                msg = extended_commands[command.split()[0]]
+                print(msg)
+                logging.info(msg)
+
+                if pCommand[2]:
+                    spectrum_file_name = pCommand[2]
+                else:
+                    spectrum_file_name = datetime.now().strftime(f'spectrum_%Y%m%d%H%M%S.txt')
+
+                # получение спектров
+                try:
+                    logging.info('getting spectra...')
+                    h1 = hyperion.Hyperion(ipAddress)
+                    spectrum = h1.spectra
+
+                    logging.info('saving spectra...')
+                    k = zip(spectrum.wavelengths, *spectrum.data)
+                    with open(spectrum_file_name, 'w') as spectrum_file:
+                        for i in k:
+                            print('\t'.join(str(x) for x in i), file=spectrum_file)
+                except Exception as e:
+                    logging.error(f'some error during getting spectra - exception: {e.__doc__}')
