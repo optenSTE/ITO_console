@@ -6,10 +6,10 @@
 
 Используется API hyperion https://github.com/optenSTE/HyperionAPI
 
-Usage: ITO_console.exe [ip] [command] [command] [command]...
+Usage: ITO_console.exe [ip] [command1] [command2] [param1] [param2]... [command3]...
         ip - IPv4 address of ITO, like 10.0.0.55
         command - one or more command to be send to ITO separated by a space,
-                  like '#GetBoardTemperature #GetFirmwareVersion'
+                  like '#GetBoardTemperature'
 """
 
 import sys
@@ -17,13 +17,13 @@ import hyperion
 import logging
 from datetime import datetime
 
-program_version = '21.10.2021'
+program_version = '22.10.2021'
 
 # name_of_command: command_description
-extended_commands = {'_sync_clock': 'set ITO clock by this PC time',
-                     '_sync_clock_utc': 'set ITO clock by this PC UTC-time (no time zone)',
-                     '_save_spectrum': 'save full spectrum to file'
-                     }
+extended_commands_list = {'_sync_clock': 'set ITO clock by this PC time',
+                          '_sync_clock_utc': 'set ITO clock by this PC UTC-time (no time zone)',
+                          '_save_spectrum': 'save full spectrum to file'
+                          }
 
 
 def validate_ip(s):
@@ -33,8 +33,7 @@ def validate_ip(s):
     for x in a:
         if not x.isdigit():
             return False
-        i = int(x)
-        if i < 0 or i > 255:
+        if not 0 <= int(x) <= 255:
             return False
     return True
 
@@ -54,14 +53,12 @@ if __name__ == "__main__":
         command - one or more command to be send to ITO separated by a space,
                   like '#GetBoardTemperature #GetFirmwareVersion'\n""")
 
-    # разбор командной строки
+    # если нет IP-адреса, то его нужно запросить
     if len(sys.argv) <= 1:
         # exe only -> ask for ip
         ipAddress = input('Enter ITO IPv4 (eg. 10.0.0.55)>>')
     else:
-        # exe + ip
         ipAddress = sys.argv[1]
-        commands_list.extend([line.lower() for line in sys.argv[2:]])
 
     # check ip syntax
     if not validate_ip(ipAddress):
@@ -92,7 +89,18 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         hyperion_commands_list.extend([command.lower() for command in response.message.split('\r\n')])
-        hyperion_commands_list.extend(extended_commands.keys())
+        hyperion_commands_list.extend(extended_commands_list.keys())
+
+    # вытащить список команд из командной строки
+    if len(sys.argv) > 2:
+        # команды и их параметры разделены пробелами - нужно корректно отличить одно от другого
+        for text in sys.argv[2:]:
+            if text.lower() in hyperion_commands_list:
+                # получили имя команды
+                commands_list.append(text.lower())
+            elif commands_list:
+                # получили параметр для предыдущей команды (если она есть)
+                commands_list[-1] = commands_list[-1] + ' ' + text
 
     print("""Hyperion Commands begin with #.  
             Use #help for complete list of valid commands.
@@ -151,7 +159,7 @@ if __name__ == "__main__":
             if '_sync_clock' in pCommand[0]:
                 # установка часов ИТО по часам этого компьютера
                 logging.info(command)
-                msg = extended_commands[command.split()[0]]
+                msg = extended_commands_list[command.split()[0]]
                 print(msg)
                 logging.info(msg)
 
@@ -159,6 +167,8 @@ if __name__ == "__main__":
                     datetime_to_be_set = datetime.now()
                 elif pCommand[0] == 'sync_clock_utc':
                     datetime_to_be_set = datetime.utcnow()
+                else:
+                    continue
 
                 # добавим команды на установку времени в конвейр команд - исполнятся в следующих циклах
                 commands_list.insert(0, f"#SetInstrumentUtcDateTime {datetime_to_be_set.strftime('%Y %m %d %H %M %S')}".lower())
@@ -167,7 +177,7 @@ if __name__ == "__main__":
             elif pCommand[0] == '_save_spectrum':
                 # save full spectrum to file
                 logging.info(command)
-                msg = extended_commands[command.split()[0]]
+                msg = extended_commands_list[command.split()[0]]
                 print(msg)
                 logging.info(msg)
 
