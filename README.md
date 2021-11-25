@@ -15,4 +15,6 @@ command - one or more command to be send to ITO separated by a space, like '#Get
 _sync_clock - установка часов ИТО по часам компьютера (используется часовой пояс)
 _sуnc_clock_utс - установка часов ИТО по часам компьютера (время UTC)
 _save_spectrum [spectrum_file_name] - запись спектра в текстовый файл
+_get_config - сохранение конфигурации текущего прибора в виде скрипта с командами для последующего восстановления
+_exit - выход из программы
 ```
