@@ -28,7 +28,8 @@ extended_commands_list = {'_sync_clock': 'set ITO clock by this PC time',
                           '_sync_clock_utc': 'set ITO clock by this PC UTC-time (no time zone)',
                           '_save_spectrum': 'save full spectrum to file',
                           '_load_commands': 'load commands sequence from file (each command in new line)',
-                          '_get_config': 'read all important commands'
+                          '_get_config': 'save instrument configuration to file',
+                          '_exit': 'finish program'
                           }
 
 
@@ -71,7 +72,7 @@ if __name__ == "__main__":
                   like '#GetBoardTemperature #GetFirmwareVersion'""")
     print("""Hyperion Commands begin with #.  
         Use #help for complete list of valid commands.
-        Type "exit" to close the console.""")
+        Type "_exit" to close the console.""")
     print(f'Console built-in commands:')
     for key, value in extended_commands_list.items():
         print(f'\t{key} - {value}')
@@ -139,11 +140,8 @@ if __name__ == "__main__":
 
             if len(command) == 0:
                 continue
-            elif command.lower().find('exit') == 0:
-                break
-            elif command.partition(" ")[0] in hyperion_commands_list:
-                # add one command
-                commands_list.append(command)
+            # add one command
+            commands_list.append(command)
 
         if commands_list:
             # обработаем список поступивших команд по одной, удаляя из списка
@@ -178,6 +176,10 @@ if __name__ == "__main__":
 
         # дополнительные команды - от меня
         elif command[0] == "_":
+
+            if '_exit' in pCommand[0]:
+                break
+
             if '_sync_clock' in pCommand[0]:
                 # установка часов ИТО по часам этого компьютера
                 logging.info(command)
@@ -354,3 +356,6 @@ if __name__ == "__main__":
                     logging.info(f'The network address, netmask, and gateway that are active when the instrument is in static mode - {h1.static_network_settings}')
                     logging.info(f'The network ip configuration mode, can be dhcp or dynamic for DHCP mode, or static for static mode - {h1.network_ip_mode}')
                     f.write('\n')
+
+                    f.write('\n; ***** EXIT *****\n')
+                    f.write('_exit')
