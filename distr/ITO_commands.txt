@@ -1,0 +1,4 @@
+#GetPeaks
+_get_config
+_save_spectrum
+_exit
