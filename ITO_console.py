@@ -1,6 +1,11 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
+import hyperion
+import logging
+from datetime import datetime
+
 """
 Консоль для выполнения внутренних комманд ИТО (измеритель тяжения оптический)
 
@@ -16,12 +21,7 @@ Usage: ITO_console.exe [ip] [command1] [command2] [param1] [param2]... [command3
 c = 299792458
 n = 1.4682
 
-import sys
-import hyperion
-import logging
-from datetime import datetime
-
-program_version = '03.11.2021'
+program_version = '12.01.2022'
 
 # name_of_command: command_description
 extended_commands_list = {'_sync_clock': 'set ITO clock by this PC time',
@@ -230,8 +230,8 @@ if __name__ == "__main__":
                     logging.error('_load_commands should have file name')
                 with open(pCommand[2]) as f:
                     for line in f.readlines():
-                        if len(line.split(";")[0]) >= len('#help'):
-                            commands_list.insert(1, line.split(";")[0].lower())
+                        if len(line.rstrip().split(";")[0]) >= len('#help'):
+                            commands_list.append(line.rstrip().split(";")[0].lower())
             elif '_get_config' in pCommand[0]:
                 # read all important commands
 
